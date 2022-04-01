@@ -247,17 +247,20 @@ describe('Users', () => {
         JSON.stringify(response.body),
         JSON.stringify(expectedResponse)
       )
-    })
+      const randomUsernameNonExistent = (Math.random() + 1)
+        .toString(36)
+        .substring(7)
 
-    it('Should return a 404 status response', async () => {
-      // random username that doesn't exist
-      const randomUsername = (Math.random() + 1).toString(36).substring(7)
+      // trying to get a non-existent user, use other user's authentication to bypass auth middleware
+      const response2 = await request(server)
+        .get(`/api/users/${randomUsernameNonExistent}`)
+        .set('Authorization', `Bearer ${auth.body.authToken}`)
 
-      // trying to get this user, don't need authentication as 404 should return first
-      const response = await request(server).get(`/api/users/${randomUsername}`)
-
-      assert.equal(response.statusCode, 404)
-      assert.equal(response.body.error, `User '${randomUsername}' not found`)
+      assert.equal(response2.statusCode, 404)
+      assert.equal(
+        response2.body.error,
+        `User '${randomUsernameNonExistent}' not found`
+      )
     })
   })
 
@@ -931,6 +934,25 @@ describe('Users', () => {
       expect(response.body.message).toBe('The user has been deleted.')
       expect(dbUser).toBe(null)
       expect(response.statusCode).toBe(200)
+    })
+  })
+
+  describe('GET /users', () => {
+    it('should return response code of 200 with an array of all the user handles', async () => {
+      const user1 = await Helper.createUser('testUser1', 'password')
+      const user2 = await Helper.createUser('testUser2', 'password')
+      const user3 = await Helper.createUser('testUser3', 'password')
+
+      const token = Authentication.generateAuthToken(user1)
+
+      const response = await request(server)
+        .get('/api/users')
+        .set('Authorization', `Bearer ${token}`)
+
+      assert.equal(response.statusCode, 200)
+      assert.equal(response.body.usernames.length, 2)
+      assert.equal(response.body.usernames[0].username, user2.username)
+      assert.equal(response.body.usernames[1].username, user3.username)
     })
   })
 

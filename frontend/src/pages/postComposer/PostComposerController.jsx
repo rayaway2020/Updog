@@ -1,15 +1,20 @@
-import React, { useState } from 'react'
+import React, { useContext, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import LoadingView from '../loading/LoadingView'
 import PostComposerView from './PostComposerView'
 import useApi from '../../hooks/useApi'
 import { request } from '../../functions'
+import { AuthContext } from '../../contexts/AuthProvider'
 
 const PostComposerController = () => {
   const [postText, setPostText] = useState('')
   const [postTags, setPostTags] = useState([])
   const [postHandles, setPostHandles] = useState([])
+  const [newTags, setNewTags] = useState([])
   const [loading, setLoading] = useState(false)
-  const username = localStorage.getItem('username')
+  const {
+    user: { username },
+  } = useContext(AuthContext)
   const { data, loading: userLoading, err } = useApi(`users/${username}`)
 
   const navigate = useNavigate()
@@ -22,9 +27,10 @@ const PostComposerController = () => {
         // TODO: add postTags and postHandles to request (wait for backend)
         console.log('postTags', postTags)
         console.log('postHandles', postHandles)
+        console.log('newTags', newTags)
 
         const response = await request('posts', 'POST', {
-          text_content: postText,
+          text_content: postText.replaceAll(/<.*?>/g, ''),
         })
 
         // navigate to the newly made post
@@ -38,7 +44,7 @@ const PostComposerController = () => {
   }
 
   if (userLoading) {
-    return <div>Loading...</div>
+    return <LoadingView />
   }
 
   if (err) {
@@ -54,6 +60,7 @@ const PostComposerController = () => {
       submitForm={submitForm}
       setPostTags={setPostTags}
       setPostHandles={setPostHandles}
+      setNewTags={setNewTags}
     />
   )
 }
